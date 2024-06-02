@@ -16,5 +16,5 @@ Four baseline CMs are available:
 
 Two baseline for SASV are available: 
 
-* SASV Fusion-based baseline from SASV 2022 challenge [here] (https://github.com/sasv-challenge/SASVC2022_Baseline)
-* single integrated SASV baseline: [here] (https://github.com/sasv-challenge/SASV2_Baseline)
+* SASV Fusion-based baseline from SASV 2022 challenge [here](https://github.com/sasv-challenge/SASVC2022_Baseline)
+* single integrated SASV baseline: [here](https://github.com/sasv-challenge/SASV2_Baseline)
