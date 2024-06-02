@@ -9,10 +9,8 @@ import random
 
 
 def genSpoof_list(dir_meta, is_train=False, is_eval=False):
-
     d_meta = {}
     file_list = []
-
     with open(dir_meta, "r") as f:
         l_meta = f.readlines()
 
@@ -22,13 +20,11 @@ def genSpoof_list(dir_meta, is_train=False, is_eval=False):
             file_list.append(key)
             d_meta[key] = 1 if label == "bonafide" else 0
         return d_meta, file_list
-
     elif is_eval:
         for line in l_meta:
             key= line.strip()
             file_list.append(key)
         return file_list
-    
     else:
         for line in l_meta:
             _,key,_,_,_,label = line.strip().split(" ")
@@ -68,10 +64,8 @@ class Dataset_train(Dataset):
         self.cut = 64000 # take ~4 sec audio 
         self.fs  = 16000
      
-
     def __len__(self):
         return len(self.list_IDs)
-
 
     def __getitem__(self, index):
         key = self.list_IDs[index]
@@ -89,12 +83,9 @@ class Dataset_dev(Dataset):
         self.base_dir = base_dir
         self.cut = 64000 # take ~4 sec audio
         self.fs  = 16000
-        
-        
 
     def __len__(self):
         return len(self.list_IDs)
-
 
     def __getitem__(self, index):
         key = self.list_IDs[index]
