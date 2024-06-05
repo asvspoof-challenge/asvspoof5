@@ -1,0 +1,5 @@
+torchcontrib
+numpy
+soundfile
+tensorboard
+tqdm
