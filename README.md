@@ -21,8 +21,8 @@ Two baseline for SASV are available:
 ## Evaluation metrics
 
 Track 1
-* EER (primary)
-* Cllr, minDCF (secondary)
+* minDCF (primary)
+* Cllr, EER (secondary)
 
 Track 2
 * a-tdcf (primary)
