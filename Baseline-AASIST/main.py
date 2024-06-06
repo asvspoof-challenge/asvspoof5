@@ -23,8 +23,7 @@ from torch.utils.tensorboard import SummaryWriter
 from torchcontrib.optim import SWA
 
 from data_utils import (TrainDataset,TestDataset, genSpoof_list)
-#from evaluation import calculate_tDCF_EER
-from eval.calculate_metrics import calculate_tDCF_EER
+from eval.calculate_metrics import calculate_tDCF_EER_CLLR
 from utils import create_optimizer, seed_worker, set_seed, str_to_bool
 
 warnings.filterwarnings("ignore", category=FutureWarning)
@@ -80,7 +79,8 @@ def main(args: argparse.Namespace) -> None:
     trn_loader, dev_loader = get_loader(
         database_path, args.seed, config)
 
-    # evaluates pretrained model and exit script
+    # evaluates pretrained model 
+    # NOTE: Currently it is evaluated on the development set instead of the evaluation set
     if args.eval:
         model.load_state_dict(
             torch.load(config["model_path"], map_location=device))
@@ -88,15 +88,11 @@ def main(args: argparse.Namespace) -> None:
         print("Start evaluation...")
         produce_evaluation_file(dev_loader, model, device,
                                 eval_score_path, dev_trial_path)
-        calculate_tDCF_EER(cm_scores_file=eval_score_path,
-                           asv_score_file=database_path /
-                           config["asv_score_path"],
-                           output_file=model_tag / "t-DCF_EER.txt")
-        print("DONE.")
-        eval_eer, eval_tdcf = calculate_tDCF_EER(
+        eval_eer, eval_tdcf, eval_cllr = calculate_tDCF_EER_CLLR(
             cm_scores_file=eval_score_path,
-            asv_score_file=database_path / config["asv_score_path"],
+            asv_score_file=config["asv_score_path"],
             output_file=model_tag/"loaded_model_t-DCF_EER.txt")
+        print("DONE. eval_eer: {:.3f}, eval_tdcf:{:.5f} , eval_cllr:{:.5f}".format(eval_eer, eval_tdcf, eval_cllr))
         sys.exit(0)
 
     # get optimizer and scheduler
@@ -106,6 +102,7 @@ def main(args: argparse.Namespace) -> None:
 
     best_dev_eer = 100.
     best_dev_tdcf = 1.
+    best_dev_cllr = 1.
     n_swa_update = 0  # number of snapshots of model to use in SWA
     f_log = open(model_tag / "metric_log.txt", "a")
     f_log.write("=" * 5 + "\n")
@@ -117,26 +114,28 @@ def main(args: argparse.Namespace) -> None:
     # Training
     for epoch in range(config["num_epochs"]):
         print("training epoch{:03d}".format(epoch))
-        """
+        
         running_loss = train_epoch(trn_loader, model, optimizer, device,
                                    scheduler, config)
-        """
+        
         produce_evaluation_file(dev_loader, model, device,
                                 metric_path/"dev_score.txt", dev_trial_path)
-        dev_eer, dev_tdcf = calculate_tDCF_EER(
+        dev_eer, dev_tdcf, dev_cllr = calculate_tDCF_EER_CLLR(
             cm_scores_file=metric_path/"dev_score.txt",
-            asv_score_file=database_path/config["asv_score_path"],
+            asv_score_file=config["asv_score_path"],
             output_file=metric_path/"dev_t-DCF_EER_{}epo.txt".format(epoch),
             printout=False)
-        print("DONE.\nLoss:{:.5f}, dev_eer: {:.3f}, dev_tdcf:{:.5f}".format(
-            running_loss, dev_eer, dev_tdcf))
+        print("DONE.\nLoss:{:.5f}, dev_eer: {:.3f}, dev_tdcf:{:.5f} , dev_cllr:{:.5f}".format(
+            running_loss, dev_eer, dev_tdcf, dev_cllr))
         writer.add_scalar("loss", running_loss, epoch)
         writer.add_scalar("dev_eer", dev_eer, epoch)
         writer.add_scalar("dev_tdcf", dev_tdcf, epoch)
+        writer.add_scalar("dev_cllr", dev_cllr, epoch)
         torch.save(model.state_dict(),
                        model_save_path / "epoch_{}_{:03.3f}.pth".format(epoch, dev_eer))
 
         best_dev_tdcf = min(dev_tdcf, best_dev_tdcf)
+        best_dev_cllr = min(dev_cllr, best_dev_cllr)
         if best_dev_eer >= dev_eer:
             print("best model find at epoch", epoch)
             best_dev_eer = dev_eer
@@ -146,6 +145,7 @@ def main(args: argparse.Namespace) -> None:
             n_swa_update += 1
         writer.add_scalar("best_dev_eer", best_dev_eer, epoch)
         writer.add_scalar("best_dev_tdcf", best_dev_tdcf, epoch)
+        writer.add_scalar("best_dev_cllr", best_dev_cllr, epoch)
     
 
 def get_model(model_config: Dict, device: torch.device):
