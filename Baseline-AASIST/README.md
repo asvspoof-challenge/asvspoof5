@@ -18,7 +18,7 @@ pip install -r requirements.txt
 ```
 
 ## Train / Test
-Before running the experiment, replace the data directory of `database_path' in the config file of `./config/AASIST_ASVspoof5.conf`.
+Before running the experiment, replace the data directory of `database_path` in the config file of `./config/AASIST_ASVspoof5.conf`.
 
 To train the model:
 ```
