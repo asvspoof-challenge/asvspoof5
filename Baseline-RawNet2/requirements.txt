@@ -1,0 +1,2 @@
+librosa
+tensorboardX==2.5

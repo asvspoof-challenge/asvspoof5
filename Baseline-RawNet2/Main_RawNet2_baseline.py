@@ -108,7 +108,7 @@ def train_epoch(
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='ASVspoof5 RawNet2-baseline system')
     # Dataset
-    parser.add_argument('--database_path', type=str, default='/your/path/to/data/ASVspoof5_database/', help='Change this to user\'s full directory address of LA database (ASVspoof2019- for training & development (used as validation), ASVspoof2021 for evaluation scores). We assume that all three ASVspoof 2019 LA train, LA dev and ASVspoof2021 LA eval data folders are in the same database_path directory.')
+    parser.add_argument('--database_path', type=str, default='/your/path/to/data/ASVspoof5_database/', help='Change this to user\'s full directory address of ASVspoof5 database.')
     
     # Hyperparameters
     parser.add_argument('--batch_size', type=int, default=128)
@@ -119,7 +119,7 @@ if __name__ == '__main__':
     parser.add_argument('--seed', type=int, default=1234, 
                         help='random seed (default: 1234)')
     parser.add_argument('--output_dir', dest="output_dir",type=str,
-                        default='./ASVspoof5_RawNet2_Baseline_model', help='Dir for Model checkpoint')
+                        default='./ASVspoof5_RawNet2_Baseline', help='Dir for Model checkpoint')
     parser.add_argument('--model_path', type=str,
                         default=None, help='Model checkpoint')
     parser.add_argument('--comment', type=str, default='RawNet2_baseline_exp')
