@@ -1,6 +1,6 @@
 ## ASVspoof5 Baseline
 
-## Installation
+## Requirement
 
 First, downdoload the code through git clone.
 ```
@@ -17,7 +17,7 @@ conda install pytorch==1.13.1 pytorch-cuda=11.7 -c pytorch -c nvidia
 pip install -r requirements.txt
 ```
 
-## Train / Test
+## Usage
 Before running the experiment, replace the data directory of `database_path` in the config file of `./config/AASIST_ASVspoof5.conf`.
 
 To train the model:
@@ -28,4 +28,17 @@ python ./main.py --config ./config/AASIST_ASVspoof5.conf
 To evaluate the saved model:
 ```
 python ./main.py --config ./config/AASIST_ASVspoof5.conf --eval
+```
+
+## Citation
+This code is based on https://github.com/clovaai/aasist. If you use AASIST model, please cite the following paper:
+```
+@inproceedings{jung2022aasist,
+  title={Aasist: Audio anti-spoofing using integrated spectro-temporal graph attention networks},
+  author={Jung, Jee-weon and Heo, Hee-Soo and Tak, Hemlata and Shim, Hye-jin and Chung, Joon Son and Lee, Bong-Jin and Yu, Ha-Jin and Evans, Nicholas},
+  booktitle={ICASSP 2022-2022 IEEE international conference on acoustics, speech and signal processing (ICASSP)},
+  pages={6367--6371},
+  year={2022},
+  organization={IEEE}
+}
 ```
