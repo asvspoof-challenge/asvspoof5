@@ -25,7 +25,7 @@ To train the model:
 python ./main.py --config ./config/AASIST_ASVspoof5.conf
 ```
 
-To evaluate the saved model:
+To evaluate the saved model (showed `EER: 15.2%` on validation set):
 ```
 python ./main.py --config ./config/AASIST_ASVspoof5.conf --eval
 ```
