@@ -19,55 +19,52 @@ def obtain_asv_error_rates(tar_asv, non_asv, spoof_asv, asv_threshold):
     return Pfa_asv, Pmiss_asv, Pmiss_spoof_asv, Pfa_spoof_asv
 
 
-def compute_det_curve(target_scores, nontarget_scores):
+def compute_det_curves(*score_sets, labels=None):
+    """
+    Compute detection error tradeoff curves for given sets of scores.
+    
+    Args:
+        *score_sets: Variable length score lists.
+        labels: Labels corresponding to each score set.
+                If None, default labels are [1, 0, -1, ...] for each set.
+                
+    Returns:
+        A tuple containing:
+            - List of cumulative probabilities for each set of scores.
+            - Thresholds used for computing the probabilities.
+    """
+    if labels is None:
+        labels = [1, 0, -1]  # Default labels for the sets
 
-    n_scores = target_scores.size + nontarget_scores.size
-    all_scores = np.concatenate((target_scores, nontarget_scores))
-    labels = np.concatenate(
-        (np.ones(target_scores.size), np.zeros(nontarget_scores.size)))
+    all_scores = np.concatenate(score_sets)
+    all_labels = np.concatenate([np.full(scores.size, label) for scores, label in zip(score_sets, labels)])
 
     # Sort labels based on scores
     indices = np.argsort(all_scores, kind='mergesort')
-    labels = labels[indices]
+    sorted_labels = all_labels[indices]
 
-    # Compute false rejection and false acceptance rates
-    tar_trial_sums = np.cumsum(labels)
-    nontarget_trial_sums = nontarget_scores.size - \
-        (np.arange(1, n_scores + 1) - tar_trial_sums)
+    cumulative_sums = [np.cumsum(sorted_labels == label) for label in labels]
+    total_counts = [scores.size for scores in score_sets]
 
-    # false rejection rates
-    frr = np.concatenate(
-        (np.atleast_1d(0), tar_trial_sums / target_scores.size))
-    far = np.concatenate((np.atleast_1d(1), nontarget_trial_sums /
-                          nontarget_scores.size))  # false acceptance rates
-    # Thresholds are the sorted scores
-    thresholds = np.concatenate(
-        (np.atleast_1d(all_scores[indices[0]] - 0.001), all_scores[indices]))
+    cumulative_probs = [np.concatenate((np.atleast_1d(0 if label != 0 else 1), sums / count))
+                        for sums, count, label in zip(cumulative_sums, total_counts, labels)]
 
+    thresholds = np.concatenate((np.atleast_1d(all_scores[indices[0]] - 0.001), all_scores[indices]))
+
+    return cumulative_probs, thresholds
+
+
+def compute_det_curve(target_scores, nontarget_scores):
+    frr_far, thresholds = compute_det_curves(target_scores, nontarget_scores, labels=[1, 0])
+    frr, far = frr_far
     return frr, far, thresholds
 
 
 def compute_Pmiss_Pfa_Pspoof_curves(tar_scores, non_scores, spf_scores):
-
-    # Concatenate all scores and designate arbitrary labels 1=target, 0=nontarget, -1=spoof
-    all_scores = np.concatenate((tar_scores, non_scores, spf_scores))
-    labels = np.concatenate((np.ones(tar_scores.size), np.zeros(non_scores.size), -1*np.ones(spf_scores.size)))
-
-    # Sort labels based on scores
-    indices = np.argsort(all_scores, kind='mergesort')
-    labels = labels[indices]
-
-    # Cumulative sums
-    tar_sums    = np.cumsum(labels==1)
-    non_sums    = np.cumsum(labels==0)
-    spoof_sums  = np.cumsum(labels==-1)
-
-    Pmiss       = np.concatenate((np.atleast_1d(0), tar_sums / tar_scores.size))
-    Pfa_non     = np.concatenate((np.atleast_1d(1), 1 - (non_sums / non_scores.size)))
-    Pfa_spoof   = np.concatenate((np.atleast_1d(1), 1 - (spoof_sums / spf_scores.size)))
-    thresholds  = np.concatenate((np.atleast_1d(all_scores[indices[0]] - 0.001), all_scores[indices]))  # Thresholds are the sorted scores
-
+    Pmiss_Pfa, thresholds = compute_det_curves(tar_scores, non_scores, spf_scores, labels=[1, 0, -1])
+    Pmiss, Pfa_non, Pfa_spoof = Pmiss_Pfa
     return Pmiss, Pfa_non, Pfa_spoof, thresholds
+
 
 
 def compute_eer(target_scores, nontarget_scores):
