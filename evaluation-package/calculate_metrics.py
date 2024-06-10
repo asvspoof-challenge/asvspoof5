@@ -1,6 +1,9 @@
+import sys
 import os
+
 import numpy as np
 
+from a_dcf import a_dcf
 from .calculate_modules import *
 
 
@@ -79,7 +82,6 @@ def calculate_aDCF_tdcf_tEER(cm_scores_file,
     # Primary metrics: a_DCF
     # Secondary metrics: min t-DCF, t-EER
 
-    from a_dcf import a_dcf
     # Calculate a-DCF (only one score file, the output of the integrated/tandem system is needed)
     adcf = a_dcf.calculate_a_dcf(cm_scores_file)['min_a_dcf']
 

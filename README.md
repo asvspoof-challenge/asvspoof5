@@ -24,5 +24,5 @@ Track 1
 * CLLR, EER (secondary)
 
 Track 2
-* a-tdcf (primary)
+* a-DCF (primary)
 * min t-DCF and t-EER (secondary)

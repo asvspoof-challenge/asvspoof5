@@ -1,4 +1,6 @@
-## ASVspoof5 Baseline
+# AASIST ASVspoof5 Baseline
+By Hye-jin Shim, Carnegie Mellon University, 2024
+
 
 ## Requirement
 
@@ -26,6 +28,7 @@ python ./main.py --config ./config/AASIST_ASVspoof5.conf
 ```
 
 To evaluate the saved model (showed `EER: 15.2%` on validation set):
+* Evaluation only phase considers both of Phase 1 and Phase 2 evaluation metrics
 ```
 python ./main.py --config ./config/AASIST_ASVspoof5.conf --eval
 ```

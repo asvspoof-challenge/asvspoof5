@@ -23,7 +23,7 @@ from torch.utils.tensorboard import SummaryWriter
 from torchcontrib.optim import SWA
 
 from data_utils import (TrainDataset,TestDataset, genSpoof_list)
-from eval.calculate_metrics import calculate_tDCF_EER_CLLR
+from eval.calculate_metrics import calculate_minDCF_EER_CLLR, calculate_aDCF_tdcf_tEER
 from utils import create_optimizer, seed_worker, set_seed, str_to_bool
 
 warnings.filterwarnings("ignore", category=FutureWarning)
@@ -88,11 +88,15 @@ def main(args: argparse.Namespace) -> None:
         print("Start evaluation...")
         produce_evaluation_file(dev_loader, model, device,
                                 eval_score_path, dev_trial_path)
-        eval_eer, eval_tdcf, eval_cllr = calculate_tDCF_EER_CLLR(
+        eval_eer, eval_dcf, eval_cllr = calculate_minDCF_EER_CLLR(
             cm_scores_file=eval_score_path,
-            asv_score_file=config["asv_score_path"],
             output_file=model_tag/"loaded_model_t-DCF_EER.txt")
-        print("DONE. eval_eer: {:.3f}, eval_tdcf:{:.5f} , eval_cllr:{:.5f}".format(eval_eer, eval_tdcf, eval_cllr))
+        eval_adcf, eval_tdcf, eval_teer = calculate_aDCF_tdcf_tEER(
+            cm_scores_file=eval_score_path,
+            asv_scores_file= config["asv_score_path"],
+            output_file=model_tag/"loaded_model_Phase2_result.txt")
+        print("DONE. eval_eer: {:.3f}, eval_dcf:{:.5f} , eval_cllr:{:.5f}".format(eval_eer, eval_dcf, eval_cllr))
+        print("DONE. eval_adcf: {:.3f}, eval_tdcf:{:.5f} , eval_teer:{:.5f}".format(eval_adcf, eval_tdcf, eval_teer))
         sys.exit(0)
 
     # get optimizer and scheduler
@@ -101,7 +105,7 @@ def main(args: argparse.Namespace) -> None:
     optimizer_swa = SWA(optimizer)
 
     best_dev_eer = 100.
-    best_dev_tdcf = 1.
+    best_dev_dcf = 1.
     best_dev_cllr = 1.
     n_swa_update = 0  # number of snapshots of model to use in SWA
     f_log = open(model_tag / "metric_log.txt", "a")
@@ -120,21 +124,20 @@ def main(args: argparse.Namespace) -> None:
         
         produce_evaluation_file(dev_loader, model, device,
                                 metric_path/"dev_score.txt", dev_trial_path)
-        dev_eer, dev_tdcf, dev_cllr = calculate_tDCF_EER_CLLR(
+        dev_eer, dev_dcf, dev_cllr = calculate_minDCF_EER_CLLR(
             cm_scores_file=metric_path/"dev_score.txt",
-            asv_score_file=config["asv_score_path"],
-            output_file=metric_path/"dev_t-DCF_EER_{}epo.txt".format(epoch),
+            output_file=metric_path/"dev_DCF_EER_{}epo.txt".format(epoch),
             printout=False)
-        print("DONE.\nLoss:{:.5f}, dev_eer: {:.3f}, dev_tdcf:{:.5f} , dev_cllr:{:.5f}".format(
-            running_loss, dev_eer, dev_tdcf, dev_cllr))
+        print("DONE.\nLoss:{:.5f}, dev_eer: {:.3f}, dev_dcf:{:.5f} , dev_cllr:{:.5f}".format(
+            running_loss, dev_eer, dev_dcf, dev_cllr))
         writer.add_scalar("loss", running_loss, epoch)
         writer.add_scalar("dev_eer", dev_eer, epoch)
-        writer.add_scalar("dev_tdcf", dev_tdcf, epoch)
+        writer.add_scalar("dev_dcf", dev_dcf, epoch)
         writer.add_scalar("dev_cllr", dev_cllr, epoch)
         torch.save(model.state_dict(),
                        model_save_path / "epoch_{}_{:03.3f}.pth".format(epoch, dev_eer))
 
-        best_dev_tdcf = min(dev_tdcf, best_dev_tdcf)
+        best_dev_dcf = min(dev_dcf, best_dev_dcf)
         best_dev_cllr = min(dev_cllr, best_dev_cllr)
         if best_dev_eer >= dev_eer:
             print("best model find at epoch", epoch)
@@ -144,7 +147,7 @@ def main(args: argparse.Namespace) -> None:
             optimizer_swa.update_swa()
             n_swa_update += 1
         writer.add_scalar("best_dev_eer", best_dev_eer, epoch)
-        writer.add_scalar("best_dev_tdcf", best_dev_tdcf, epoch)
+        writer.add_scalar("best_dev_tdcf", best_dev_dcf, epoch)
         writer.add_scalar("best_dev_cllr", best_dev_cllr, epoch)
     
 
