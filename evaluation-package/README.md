@@ -14,12 +14,14 @@ Track 2
 For the Track 1, cm score 
 
 1. Track 1
+   
 Calucate minDCF, CLLR, and EER by giving one cm score file
 ```
 python evaluation.py -m p1 -cm cm_score_file
 ```
 
 2. Track 2
+
 Calucate a-DCF, min t-DCF, and t-EER by giving cm score file (and asv score file for min t-DCF and t-EER)
 To compute a-DCF, `pip install a_dcf` will install the package.
 For further details, please check [([Github](https://github.com/shimhz/a_DCF))].
