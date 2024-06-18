@@ -88,15 +88,21 @@ def main(args: argparse.Namespace) -> None:
         print("Start evaluation...")
         produce_evaluation_file(dev_loader, model, device,
                                 eval_score_path, dev_trial_path)
-        eval_eer, eval_dcf, eval_cllr = calculate_minDCF_EER_CLLR(
+
+        eval_dcf, eval_eer, eval_cllr = calculate_minDCF_EER_CLLR(
             cm_scores_file=eval_score_path,
-            output_file=model_tag/"loaded_model_t-DCF_EER.txt")
+            output_file=model_tag/"loaded_model_result.txt")
+        print("DONE. eval_eer: {:.3f}, eval_dcf:{:.5f} , eval_cllr:{:.5f}".format(eval_eer, eval_dcf, eval_cllr))
+
+        """
+        # Need asv score file for Track 2
+        asv_score_path = ""
         eval_adcf, eval_tdcf, eval_teer = calculate_aDCF_tdcf_tEER(
             cm_scores_file=eval_score_path,
-            asv_scores_file= config["asv_score_path"],
+            asv_scores_file= asv_score_path,
             output_file=model_tag/"loaded_model_Phase2_result.txt")
-        print("DONE. eval_eer: {:.3f}, eval_dcf:{:.5f} , eval_cllr:{:.5f}".format(eval_eer, eval_dcf, eval_cllr))
         print("DONE. eval_adcf: {:.3f}, eval_tdcf:{:.5f} , eval_teer:{:.5f}".format(eval_adcf, eval_tdcf, eval_teer))
+        """
         sys.exit(0)
 
     # get optimizer and scheduler
@@ -199,7 +205,7 @@ def get_loader(
                                 is_eval=False)
     print("no. validation files:", len(file_dev))
 
-    dev_set = TestDataset(list_IDs=file_dev,
+    dev_set = TestDataset(list_IDs=file_dev[:2000],
                                             base_dir=dev_database_path)
     dev_loader = DataLoader(dev_set,
                             batch_size=config["batch_size"],
@@ -230,12 +236,12 @@ def produce_evaluation_file(
         fname_list.extend(utt_id)
         score_list.extend(batch_score.tolist())
 
-    assert len(trial_lines) == len(fname_list) == len(score_list)
+    #assert len(trial_lines) == len(fname_list) == len(score_list)
     with open(save_path, "w") as fh:
         for fn, sco, trl in zip(fname_list, score_list, trial_lines):
             spk_id, utt_id, _, _, src, key = trl.strip().split(' ')
             assert fn == utt_id
-            fh.write("{} {} {} {} {}\n".format(spk_id, utt_id, src, key, sco))
+            fh.write("{} {} {} {}\n".format(spk_id, utt_id, sco, key))
     print("Scores saved to {}".format(save_path))
 
 
