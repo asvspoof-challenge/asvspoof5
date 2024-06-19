@@ -15,14 +15,14 @@ For the Track 1, cm score
 
 1. Track 1
    
-Calucate minDCF, CLLR, and EER by giving one cm score file
+Calculate minDCF, CLLR, and EER by giving one cm score file
 ```
 python evaluation.py --m p1 --cm cm_score_file
 ```
 
 2. Track 2
 
-Calucate a-DCF, min t-DCF, and t-EER by giving cm score file (and asv score file for min t-DCF and t-EER)
+Calculate a-DCF, min t-DCF, and t-EER by giving cm score file (and asv score file for min t-DCF and t-EER)
 To compute a-DCF, `pip install a_dcf` will install the package.
 For further details, please check [([Github](https://github.com/shimhz/a_DCF))].
 ```
@@ -49,11 +49,17 @@ LA_0007 LA_E_7417804 -2.306972861289978 spoof
 bonafide target 36.78691
 bonafide nontarget -39.15536
 A01 spoof 27.07672
+
+# SASV score file (for a-DCF)
+# <speaker_id> <utterance_id> <score> <trial type> 
+LA_0015 LA_E_1103494 6.960134565830231 target
+LA_0007 LA_E_5013670 6.150891035795212 nontarget
+LA_0007 LA_E_7417804 -2.306972861289978 spoof
 ```
 
 
 ## Citation
-If you use provided evaluation metrics, please cite the following papers:
+If you use the provided evaluation metrics, please cite the following papers:
 
 * a-DCF
 ```bibtex
