@@ -17,7 +17,7 @@ For the Track 1, cm score
    
 Calucate minDCF, CLLR, and EER by giving one cm score file
 ```
-python evaluation.py -m p1 -cm cm_score_file
+python evaluation.py --m p1 --cm cm_score_file
 ```
 
 2. Track 2
@@ -27,10 +27,10 @@ To compute a-DCF, `pip install a_dcf` will install the package.
 For further details, please check [([Github](https://github.com/shimhz/a_DCF))].
 ```
 # To calculate all metrics, 
-python evaluation.py -m p2_tandem -cm cm_score_file -asv asv_score_file
+python evaluation.py --m p2_tandem --cm cm_score_file --asv asv_score_file
 
 # To calculate a-DCF only, 
-python evaluation.py -m p2_single -cm cm_score_file
+python evaluation.py --m p2_single --cm cm_score_file
 ```
 
 ### Score file format
