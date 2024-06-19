@@ -1,7 +1,22 @@
 import sys
-import os
-
 import numpy as np
+
+
+def obtain_asv_error_rates(tar_asv, non_asv, spoof_asv, asv_threshold):
+
+    # False alarm and miss rates for ASV
+    Pfa_asv = sum(non_asv >= asv_threshold) / non_asv.size
+    Pmiss_asv = sum(tar_asv < asv_threshold) / tar_asv.size
+
+    # Rate of rejecting spoofs in ASV
+    if spoof_asv.size == 0:
+        Pmiss_spoof_asv = None
+        Pfa_spoof_asv = None
+    else:
+        Pmiss_spoof_asv = np.sum(spoof_asv < asv_threshold) / spoof_asv.size
+        Pfa_spoof_asv = np.sum(spoof_asv >= asv_threshold) / spoof_asv.size
+
+    return Pfa_asv, Pmiss_asv, Pmiss_spoof_asv, Pfa_spoof_asv
 
 
 def obtain_asv_error_rates(tar_asv, non_asv, spoof_asv, asv_threshold):
@@ -78,7 +93,7 @@ def compute_eer(target_scores, nontarget_scores):
     abs_diffs = np.abs(frr - far)
     min_index = np.argmin(abs_diffs)
     eer = np.mean((frr[min_index], far[min_index]))
-    return eer, frr, far, thresholds[min_index]
+    return eer, frr, far, thresholds
 
 
 def compute_mindcf(frr, far, thresholds, Pspoof, Cmiss, Cfa):
@@ -100,66 +115,6 @@ def compute_mindcf(frr, far, thresholds, Pspoof, Cmiss, Cfa):
 
 def compute_tDCF(bonafide_score_cm, spoof_score_cm, Pfa_asv, Pmiss_asv,
                  Pmiss_spoof_asv, cost_model, print_cost):
-    """
-    Compute Tandem Detection Cost Function (t-DCF) [1] for a fixed ASV system.
-    In brief, t-DCF returns a detection cost of a cascaded system of this form,
-
-      Speech waveform -> [CM] -> [ASV] -> decision
-
-    where CM stands for countermeasure and ASV for automatic speaker
-    verification. The CM is therefore used as a 'gate' to decided whether or
-    not the input speech sample should be passed onwards to the ASV system.
-    Generally, both CM and ASV can do detection errors. Not all those errors
-    are necessarily equally cost, and not all types of users are necessarily
-    equally likely. The tandem t-DCF gives a principled with to compare
-    different spoofing countermeasures under a detection cost function
-    framework that takes that information into account.
-
-    INPUTS:
-
-      bonafide_score_cm   A vector of POSITIVE CLASS (bona fide or human)
-                          detection scores obtained by executing a spoofing
-                          countermeasure (CM) on some positive evaluation trials.
-                          trial represents a bona fide case.
-      spoof_score_cm      A vector of NEGATIVE CLASS (spoofing attack)
-                          detection scores obtained by executing a spoofing
-                          CM on some negative evaluation trials.
-      Pfa_asv             False alarm (false acceptance) rate of the ASV
-                          system that is evaluated in tandem with the CM.
-                          Assumed to be in fractions, not percentages.
-      Pmiss_asv           Miss (false rejection) rate of the ASV system that
-                          is evaluated in tandem with the spoofing CM.
-                          Assumed to be in fractions, not percentages.
-      Pmiss_spoof_asv     Miss rate of spoof samples of the ASV system that
-                          is evaluated in tandem with the spoofing CM. That
-                          is, the fraction of spoof samples that were
-                          rejected by the ASV system.
-      cost_model          A struct that contains the parameters of t-DCF,
-                          with the following fields.
-
-                          Ptar        Prior probability of target speaker.
-                          Pnon        Prior probability of nontarget speaker (zero-effort impostor)
-                          Psoof       Prior probability of spoofing attack.
-                          Cmiss_asv   Cost of ASV falsely rejecting target.
-                          Cfa_asv     Cost of ASV falsely accepting nontarget.
-                          Cmiss_cm    Cost of CM falsely rejecting target.
-                          Cfa_cm      Cost of CM falsely accepting spoof.
-
-      print_cost          Print a summary of the cost parameters and the
-                          implied t-DCF cost function?
-
-    OUTPUTS:
-
-      tDCF_norm           Normalized t-DCF curve across the different CM
-                          system operating points; see [2] for more details.
-                          Normalized t-DCF > 1 indicates a useless
-                          countermeasure (as the tandem system would do
-                          better without it). min(tDCF_norm) will be the
-                          minimum t-DCF used in ASVspoof 2019 [2].
-      CM_thresholds       Vector of same size as tDCF_norm corresponding to
-                          the CM threshold (operating point).
-
-    """
 
     # Sanity check of cost parameters
     if cost_model['Cfa_asv'] < 0 or cost_model['Cmiss_asv'] < 0 or \

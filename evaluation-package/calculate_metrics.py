@@ -1,9 +1,6 @@
-import sys
 import os
-
 import numpy as np
 
-from a_dcf import a_dcf
 from .calculate_modules import *
 
 
@@ -24,31 +21,17 @@ def calculate_minDCF_EER_CLLR(cm_scores_file,
 
     # Load CM scores
     cm_data = np.genfromtxt(cm_scores_file, dtype=str)
-    cm_sources = cm_data[:, 2]
     cm_keys = cm_data[:, 3]
-    cm_scores = cm_data[:, 4].astype(np.float64)
+    cm_scores = cm_data[:, 2].astype(np.float64)
 
     # Extract bona fide (real human) and spoof scores from the CM scores
     bona_cm = cm_scores[cm_keys == 'bonafide']
     spoof_cm = cm_scores[cm_keys == 'spoof']
 
     # EERs of the standalone systems and fix ASV operating point to EER threshold
-    eer_cm, frr, far, thresholds = compute_eer(bona_cm, spoof_cm)[0]
+    eer_cm, frr, far, thresholds = compute_eer(bona_cm, spoof_cm)#[0]
     cllr_cm = calculate_CLLR(bona_cm, spoof_cm)
     minDCF_cm, _ = compute_mindcf(frr, far, thresholds, Pspoof, dcf_cost_model['Cmiss'], dcf_cost_model['Cfa'])
-
-    attack_types = [f'A{_id:02d}' for _id in range(9, 17)]
-    if printout:
-        spoof_cm_breakdown = {
-            attack_type: cm_scores[cm_sources == attack_type]
-            for attack_type in attack_types
-        }
-
-        eer_cm_breakdown = {
-            attack_type: compute_eer(bona_cm,
-                                     spoof_cm_breakdown[attack_type])[0]
-            for attack_type in attack_types
-        }
 
     if printout:
         with open(output_file, "w") as f_res:
@@ -62,28 +45,22 @@ def calculate_minDCF_EER_CLLR(cm_scores_file,
             f_res.write('\tCLLR\t\t= {:8.9f} % '
                         '(CLLR for countermeasure)\n'.format(
                             cllr_cm * 100))
-
-            f_res.write('\nBREAKDOWN CM SYSTEM\n')
-            for attack_type in attack_types:
-                _eer = eer_cm_breakdown[attack_type] * 100
-                f_res.write(
-                    f'\tEER {attack_type}\t\t= {_eer:8.9f} % (Equal error rate for {attack_type})\n'
-                )
         os.system(f"cat {output_file}")
 
     return minDCF_cm, eer_cm, cllr_cm
 
 
 def calculate_aDCF_tdcf_tEER(cm_scores_file,
-                       asv_score_file,
+                       asv_scores_file,
                        output_file,
                        printout=True):
     # Evaluation metrics for Phase 2
     # Primary metrics: a_DCF
     # Secondary metrics: min t-DCF, t-EER
 
+    from a_dcf import a_dcf
     # Calculate a-DCF (only one score file, the output of the integrated/tandem system is needed)
-    adcf = a_dcf.calculate_a_dcf(cm_scores_file)['min_a_dcf']
+    adcf = a_dcf.calculate_a_dcf(asv_scores_file)['min_a_dcf']
 
     # Fix tandem detection cost function (t-DCF) parameters
     Pspoof = 0.05
@@ -100,15 +77,14 @@ def calculate_aDCF_tdcf_tEER(cm_scores_file,
     }
 
     # Load organizers' ASV scores
-    asv_data = np.genfromtxt(asv_score_file, dtype=str)
+    asv_data = np.genfromtxt(asv_scores_file, dtype=str)
     asv_keys = asv_data[:, 1]
     asv_scores = asv_data[:, 2].astype(np.float64)
 
     # Load CM scores
     cm_data = np.genfromtxt(cm_scores_file, dtype=str)
-    cm_sources = cm_data[:, 2]
     cm_keys = cm_data[:, 3]
-    cm_scores = cm_data[:, 4].astype(np.float64)
+    cm_scores = cm_data[:, 2].astype(np.float64)
 
     # Extract target, nontarget, and spoof scores from the ASV scores
     tar_asv = asv_scores[asv_keys == 'target']
@@ -134,23 +110,9 @@ def calculate_aDCF_tdcf_tEER(cm_scores_file,
     # EERs of the standalone systems and fix ASV operating point to
     # EER threshold
     eer_asv, _, _, asv_threshold = compute_eer(tar_asv, non_asv)
-    eer_cm, frr, far, thresholds = compute_eer(bona_cm, spoof_cm)[0]
+    eer_cm, frr, far, thresholds = compute_eer(bona_cm, spoof_cm)#[0]
     minDCF_cm, _ = compute_mindcf(frr, far, thresholds, Pspoof, tdcf_cost_model['Cmiss'], tdcf_cost_model['Cfa'])
 
-
-    #attack_types = [f'A{_id:02d}' for _id in range(7, 20)]
-    attack_types = [f'A{_id:02d}' for _id in range(9, 17)]
-    if printout:
-        spoof_cm_breakdown = {
-            attack_type: cm_scores[cm_sources == attack_type]
-            for attack_type in attack_types
-        }
-
-        eer_cm_breakdown = {
-            attack_type: compute_eer(bona_cm,
-                                     spoof_cm_breakdown[attack_type])[0]
-            for attack_type in attack_types
-        }
 
     [Pfa_asv, Pmiss_asv,
      Pmiss_spoof_asv, Pfa_spoof_asv] = obtain_asv_error_rates(tar_asv, non_asv, spoof_asv,
@@ -169,26 +131,20 @@ def calculate_aDCF_tdcf_tEER(cm_scores_file,
     min_tDCF_index = np.argmin(tDCF_curve)
     min_tDCF = tDCF_curve[min_tDCF_index]
 
+    teer = compute_teer(Pmiss_CM, Pfa_CM, tau_CM, Pmiss_asv, Pfa_non_ASV, Pfa_spf_ASV, tau_ASV)
+    
+
     if printout:
         with open(output_file, "w") as f_res:
             f_res.write('\nSASV RESULT\n')
             f_res.write('\tEER\t\t= {:8.9f} % '
                         '(Equal error rate for countermeasure)\n'.format(
-                            eer_cm * 100))
+                            teer))
 
             f_res.write('\nTANDEM\n')
             f_res.write('\tmin-tDCF\t\t= {:8.9f}\n'.format(min_tDCF))
-
-            f_res.write('\nBREAKDOWN CM SYSTEM\n')
-            for attack_type in attack_types:
-                _eer = eer_cm_breakdown[attack_type] * 100
-                f_res.write(
-                    f'\tEER {attack_type}\t\t= {_eer:8.9f} % (Equal error rate for {attack_type})\n'
-                )
         os.system(f"cat {output_file}")
 
-    teer = compute_teer(Pmiss_CM, Pfa_CM, tau_CM, Pmiss_asv, Pfa_non_ASV, Pfa_spf_ASV, tau_ASV)
-    
     return adcf, min_tDCF, teer
 
 
