@@ -1,7 +1,7 @@
 import os
 import numpy as np
 
-from .calculate_modules import *
+from calculate_modules import *
 
 
 def calculate_minDCF_EER_CLLR(cm_scores_file,
@@ -22,7 +22,7 @@ def calculate_minDCF_EER_CLLR(cm_scores_file,
     # Load CM scores
     cm_data = np.genfromtxt(cm_scores_file, dtype=str)
     cm_keys = cm_data[:, 3]
-    cm_scores = cm_data[:, 2].astype(np.float64)
+    cm_scores = cm_data[:, 4].astype(np.float64)
 
     # Extract bona fide (real human) and spoof scores from the CM scores
     bona_cm = cm_scores[cm_keys == 'bonafide']
@@ -60,6 +60,7 @@ def calculate_aDCF_tdcf_tEER(cm_scores_file,
 
     from a_dcf import a_dcf
     # Calculate a-DCF (only one score file, the output of the integrated/tandem system is needed)
+    score_for_adcf = "./score_for_adcf.txt"
     adcf = a_dcf.calculate_a_dcf(asv_scores_file)['min_a_dcf']
 
     # Fix tandem detection cost function (t-DCF) parameters
@@ -137,11 +138,8 @@ def calculate_aDCF_tdcf_tEER(cm_scores_file,
     if printout:
         with open(output_file, "w") as f_res:
             f_res.write('\nSASV RESULT\n')
-            f_res.write('\tEER\t\t= {:8.9f} % '
-                        '(Equal error rate for countermeasure)\n'.format(
-                            teer))
-
-            f_res.write('\nTANDEM\n')
+            f_res.write('\ta-DCF\t\t= {:8.9f}\n'.format(adcf))
+            f_res.write('\tt-EER\t\t= {:8.9f}\n'.format(teer))
             f_res.write('\tmin-tDCF\t\t= {:8.9f}\n'.format(min_tDCF))
         os.system(f"cat {output_file}")
 
