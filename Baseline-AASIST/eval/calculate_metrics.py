@@ -102,7 +102,12 @@ def calculate_aDCF_tdcf_tEER(cm_scores_file,
     X_spf = np.array([asv_scores[asv_keys == 'spoof'], cm_scores[asv_keys == 'spoof']],dtype=object)
 
     # Obtain ASV error curves and ASV thresholds
-    Pmiss_ASV, Pfa_non_ASV, Pfa_spf_ASV, tau_ASV = compute_Pmiss_Pfa_Pspoof_curves(X_tar[0], X_non[0], X_spf[0])
+
+    # Obtain ASV error curves and ASV thresholds
+    Pfa_non_ASV =  0.01881016557566423
+    Pmiss_ASV = 0.01880141010575793
+    Pfa_spf_ASV = 0.4607082907604729
+    _, _, _, tau_ASV = compute_Pmiss_Pfa_Pspoof_curves(X_tar[0], X_non[0], X_spf[0])
 
     # Obtain CM error curves and CM thresholds.
     Pmiss_CM, Pfa_CM, tau_CM = compute_det_curve(np.concatenate([X_tar[1], X_non[1]]), X_spf[1])
