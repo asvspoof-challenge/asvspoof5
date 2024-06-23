@@ -93,7 +93,7 @@ def compute_eer(target_scores, nontarget_scores):
     abs_diffs = np.abs(frr - far)
     min_index = np.argmin(abs_diffs)
     eer = np.mean((frr[min_index], far[min_index]))
-    return eer, frr, far, thresholds
+    return eer, frr, far, thresholds, thresholds[min_index]
 
 
 def compute_mindcf(frr, far, thresholds, Pspoof, Cmiss, Cfa):
@@ -111,6 +111,44 @@ def compute_mindcf(frr, far, thresholds, Pspoof, Cmiss, Cfa):
     c_def = min(Cmiss * p_target, Cfa * (1 - p_target))
     min_dcf = min_c_det / c_def
     return min_dcf, min_c_det_threshold
+
+def compute_actDCF(bonafide_scores, spoof_scores, Pspoof, Cmiss, Cfa):
+    """
+    compute actual DCF, given threshold decided by prior and decision costs
+
+    input
+    -----
+      bonafide_scores: np.array, scores of bonafide data
+      spoof_scores: np.array, scores of spoof data
+      Pspoof: scalar, prior probabiltiy of spoofed class
+      Cmiss: scalar, decision cost of missing a bonafide sample
+      Cfa: scalar, decision cost of falsely accept a spoofed sample
+
+    output
+    ------
+      actDCF: scalar, actual DCF normalized
+      threshold: scalar, threshold for making the decision
+    """
+    # the beta in evaluation plan (eq.(3))
+    beta = Cmiss * (1 - Pspoof) / (Cfa * Pspoof)
+    
+    # compute the decision threshold based on
+    threshold = - np.log(beta)
+
+    # miss rate
+    rate_miss = np.sum(bonafide_scores < threshold) / bonafide_scores.size
+
+    # fa rate
+    rate_fa = np.sum(spoof_scores >= threshold) / spoof_scores.size
+
+    # unnormalized DCF
+    act_dcf = Cmiss * (1 - Pspoof) * rate_miss + Cfa * Pspoof * rate_fa
+
+    # normalized DCF
+    act_dcf = act_dcf / np.min([Cfa * Pspoof, Cmiss * (1 - Pspoof)])
+    
+    return act_dcf, threshold
+    
 
 
 def compute_tDCF(bonafide_score_cm, spoof_score_cm, Pfa_asv, Pmiss_asv,
