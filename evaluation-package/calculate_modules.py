@@ -3,24 +3,23 @@ import numpy as np
 
 
 def obtain_asv_error_rates(tar_asv, non_asv, spoof_asv, asv_threshold):
+    """
+    compute ASV error rates
+    
+    input
+    -----
+      tar_asv: np.array, (#N, ), target bonafide scores
+      non_asv: np.array, (#M, ), nontarget bonafide scores
+      spoof_asv: np.array, (#K, ), spoof scores
+      asv_threshold: scalar, ASV threshold
 
-    # False alarm and miss rates for ASV
-    Pfa_asv = sum(non_asv >= asv_threshold) / non_asv.size
-    Pmiss_asv = sum(tar_asv < asv_threshold) / tar_asv.size
-
-    # Rate of rejecting spoofs in ASV
-    if spoof_asv.size == 0:
-        Pmiss_spoof_asv = None
-        Pfa_spoof_asv = None
-    else:
-        Pmiss_spoof_asv = np.sum(spoof_asv < asv_threshold) / spoof_asv.size
-        Pfa_spoof_asv = np.sum(spoof_asv >= asv_threshold) / spoof_asv.size
-
-    return Pfa_asv, Pmiss_asv, Pmiss_spoof_asv, Pfa_spoof_asv
-
-
-def obtain_asv_error_rates(tar_asv, non_asv, spoof_asv, asv_threshold):
-
+    output
+    ------
+      Pfa_asv: scalar, false acceptance rate of nontarget bonafide
+      Pmiss_asv: scalar, miss rate of target bonafide
+      Pmiss_spoof_asv: scalar, 1 - Pfa_spoof_asv
+      Pfa_spoof_asv: scalar, false acceptance rate of spoofed data
+    """
     # False alarm and miss rates for ASV
     Pfa_asv = sum(non_asv >= asv_threshold) / non_asv.size
     Pmiss_asv = sum(tar_asv < asv_threshold) / tar_asv.size
@@ -37,6 +36,20 @@ def obtain_asv_error_rates(tar_asv, non_asv, spoof_asv, asv_threshold):
 
 
 def compute_det_curve(target_scores, nontarget_scores):
+    """
+    compute DET curve values
+                                                                           
+    input
+    -----
+      target_scores:    np.array, target trial scores
+      nontarget_scores: np.array, nontarget trial scores
+    
+    output
+    ------
+      frr:   np.array, FRR, (#N, ), where #N is total number of scores + 1
+      far:   np.array, FAR, (#N, ), where #N is total number of scores + 1
+      thr:   np.array, threshold, (#N, )
+    """
 
     n_scores = target_scores.size + nontarget_scores.size
     all_scores = np.concatenate((target_scores, nontarget_scores))
@@ -151,8 +164,9 @@ def compute_actDCF(bonafide_scores, spoof_scores, Pspoof, Cmiss, Cfa):
     
 
 
-def compute_tDCF(bonafide_score_cm, spoof_score_cm, Pfa_asv, Pmiss_asv,
-                 Pmiss_spoof_asv, cost_model, print_cost):
+def compute_tDCF_legacy(
+        bonafide_score_cm, spoof_score_cm, Pfa_asv, Pmiss_asv,
+        Pmiss_spoof_asv, cost_model, print_cost):
 
     # Sanity check of cost parameters
     if cost_model['Cfa_asv'] < 0 or cost_model['Cmiss_asv'] < 0 or \
@@ -245,6 +259,157 @@ def compute_tDCF(bonafide_score_cm, spoof_score_cm, Pfa_asv, Pmiss_asv,
     return tDCF_norm, CM_thresholds
 
 
+def compute_tDCF(
+        bonafide_score_cm, spoof_score_cm, 
+        Pfa_asv, Pmiss_asv, Pfa_spoof_asv, cost_model, print_cost):
+    """
+    Compute Tandem Detection Cost Function (t-DCF) [1] for a fixed ASV system.
+    In brief, t-DCF returns a detection cost of a cascaded system of this form,
+
+      Speech waveform -> [CM] -> [ASV] -> decision
+
+    where CM stands for countermeasure and ASV for automatic speaker
+    verification. The CM is therefore used as a 'gate' to decided whether or
+    not the input speech sample should be passed onwards to the ASV system.
+    Generally, both CM and ASV can do detection errors. Not all those errors
+    are necessarily equally cost, and not all types of users are necessarily
+    equally likely. The tandem t-DCF gives a principled with to compare
+    different spoofing countermeasures under a detection cost function
+    framework that takes that information into account.
+
+    INPUTS:
+
+      bonafide_score_cm   A vector of POSITIVE CLASS (bona fide or human)
+                          detection scores obtained by executing a spoofing
+                          countermeasure (CM) on some positive evaluation trials.
+                          trial represents a bona fide case.
+      spoof_score_cm      A vector of NEGATIVE CLASS (spoofing attack)
+                          detection scores obtained by executing a spoofing
+                          CM on some negative evaluation trials.
+      Pfa_asv             False alarm (false acceptance) rate of the ASV
+                          system that is evaluated in tandem with the CM.
+                          Assumed to be in fractions, not percentages.
+      Pmiss_asv           Miss (false rejection) rate of the ASV system that
+                          is evaluated in tandem with the spoofing CM.
+                          Assumed to be in fractions, not percentages.
+      Pmiss_spoof_asv     Miss rate of spoof samples of the ASV system that
+                          is evaluated in tandem with the spoofing CM. That
+                          is, the fraction of spoof samples that were
+                          rejected by the ASV system.
+      cost_model          A struct that contains the parameters of t-DCF,
+                          with the following fields.
+
+                          Ptar        Prior probability of target speaker.
+                          Pnon        Prior probability of nontarget speaker (zero-effort impostor)
+                          Psoof       Prior probability of spoofing attack.
+                          Cmiss       Cost of tandem system falsely rejecting target speaker.
+                          Cfa         Cost of tandem system falsely accepting nontarget speaker.
+                          Cfa_spoof   Cost of tandem system falsely accepting spoof.
+
+      print_cost          Print a summary of the cost parameters and the
+                          implied t-DCF cost function?
+
+    OUTPUTS:
+
+      tDCF_norm           Normalized t-DCF curve across the different CM
+                          system operating points; see [2] for more details.
+                          Normalized t-DCF > 1 indicates a useless
+                          countermeasure (as the tandem system would do
+                          better without it). min(tDCF_norm) will be the
+                          minimum t-DCF used in ASVspoof 2019 [2].
+      CM_thresholds       Vector of same size as tDCF_norm corresponding to
+                          the CM threshold (operating point).
+
+    NOTE:
+    o     In relative terms, higher detection scores values are assumed to
+          indicate stronger support for the bona fide hypothesis.
+    o     You should provide real-valued soft scores, NOT hard decisions. The
+          recommendation is that the scores are log-likelihood ratios (LLRs)
+          from a bonafide-vs-spoof hypothesis based on some statistical model.
+          This, however, is NOT required. The scores can have arbitrary range
+          and scaling.
+    o     Pfa_asv, Pmiss_asv, Pmiss_spoof_asv are in fractions, not percentages.
+
+    References:
+
+      [1] T. Kinnunen, H. Delgado, N. Evans,K.-A. Lee, V. Vestman, 
+          A. Nautsch, M. Todisco, X. Wang, M. Sahidullah, J. Yamagishi, 
+          and D.-A. Reynolds, "Tandem Assessment of Spoofing Countermeasures
+          and Automatic Speaker Verification: Fundamentals," IEEE/ACM Transaction on
+          Audio, Speech and Language Processing (TASLP).
+
+      [2] ASVspoof 2019 challenge evaluation plan
+          https://www.asvspoof.org/asvspoof2019/asvspoof2019_evaluation_plan.pdf
+    """
+
+
+    # Sanity check of cost parameters
+    if cost_model['Cfa'] < 0 or cost_model['Cmiss'] < 0 or \
+            cost_model['Cfa'] < 0 or cost_model['Cmiss'] < 0:
+        print('WARNING: Usually the cost values should be positive!')
+
+    if cost_model['Ptar'] < 0 or cost_model['Pnon'] < 0 or cost_model['Pspoof'] < 0 or \
+            np.abs(cost_model['Ptar'] + cost_model['Pnon'] + cost_model['Pspoof'] - 1) > 1e-10:
+        sys.exit('ERROR: Your prior probabilities should be positive and sum up to one.')
+
+    # Unless we evaluate worst-case model, we need to have some spoof tests against asv
+    if Pfa_spoof_asv is None:
+        sys.exit('ERROR: you should provide false alarm rate of spoof tests against your ASV system.')
+
+    # Sanity check of scores
+    combined_scores = np.concatenate((bonafide_score_cm, spoof_score_cm))
+    if np.isnan(combined_scores).any() or np.isinf(combined_scores).any():
+        sys.exit('ERROR: Your scores contain nan or inf.')
+
+    # Sanity check that inputs are scores and not decisions
+    n_uniq = np.unique(combined_scores).size
+    if n_uniq < 3:
+        sys.exit('ERROR: You should provide soft CM scores - not binary decisions')
+
+    # Obtain miss and false alarm rates of CM
+    Pmiss_cm, Pfa_cm, CM_thresholds = compute_det_curve(bonafide_score_cm, spoof_score_cm)
+
+    # Constants - see ASVspoof 2019 evaluation plan
+
+    C0 = cost_model['Ptar'] * cost_model['Cmiss'] * Pmiss_asv + cost_model['Pnon']*cost_model['Cfa']*Pfa_asv
+    C1 = cost_model['Ptar'] * cost_model['Cmiss'] - (cost_model['Ptar'] * cost_model['Cmiss'] * Pmiss_asv + cost_model['Pnon'] * cost_model['Cfa'] * Pfa_asv)
+    C2 = cost_model['Pspoof'] * cost_model['Cfa_spoof'] * Pfa_spoof_asv;
+
+
+    # Sanity check of the weights
+    if C0 < 0 or C1 < 0 or C2 < 0:
+        sys.exit('You should never see this error but I cannot evalute tDCF with negative weights - please check whether your ASV error rates are correctly computed?')
+
+    # Obtain t-DCF curve for all thresholds
+    tDCF = C0 + C1 * Pmiss_cm + C2 * Pfa_cm
+
+    # Obtain default t-DCF
+    tDCF_default = C0 + np.minimum(C1, C2)
+
+    # Normalized t-DCF
+    tDCF_norm = tDCF / tDCF_default
+
+    # Everything should be fine if reaching here.
+    if print_cost:
+
+        print('t-DCF evaluation from [Nbona={}, Nspoof={}] trials\n'.format(bonafide_score_cm.size, spoof_score_cm.size))
+        print('t-DCF MODEL')
+        print('   Ptar         = {:8.5f} (Prior probability of target user)'.format(cost_model['Ptar']))
+        print('   Pnon         = {:8.5f} (Prior probability of nontarget user)'.format(cost_model['Pnon']))
+        print('   Pspoof       = {:8.5f} (Prior probability of spoofing attack)'.format(cost_model['Pspoof']))
+        print('   Cfa          = {:8.5f} (Cost of tandem system falsely accepting a nontarget)'.format(cost_model['Cfa']))
+        print('   Cmiss        = {:8.5f} (Cost of tandem system falsely rejecting target speaker)'.format(cost_model['Cmiss']))
+        print('   Cfa_spoof    = {:8.5f} (Cost of tandem sysmte falsely accepting spoof)'.format(cost_model['Cfa_spoof']))
+        print('\n   Implied normalized t-DCF function (depends on t-DCF parameters and ASV errors), t_CM=CM threshold)')
+        print('   tDCF_norm(t_CM) = {:8.5f} + {:8.5f} x Pmiss_cm(t_CM) + {:8.5f} x Pfa_cm(t_CM)\n'.format(C0/tDCF_default, C1/tDCF_default, C2/tDCF_default))
+        print('     * The optimum value is given by the first term (0.06273). This is the normalized t-DCF obtained with an error-free CM system.')
+        print('     * The minimum normalized cost (minimum over all possible thresholds) is always <= 1.00.')
+        print('')
+
+    return tDCF_norm, CM_thresholds
+
+
+
 def calculate_CLLR(target_llrs, nontarget_llrs):
     """
     Calculate the CLLR of the scores.
@@ -278,32 +443,34 @@ def calculate_CLLR(target_llrs, nontarget_llrs):
     return cllr
 
 
-def compute_Pmiss_Pfa_Pspoof_curves(tar_scores, non_scores, spf_scores):
-
-    # Concatenate all scores and designate arbitrary labels 1=target, 0=nontarget, -1=spoof
-    all_scores = np.concatenate((tar_scores, non_scores, spf_scores))
-    labels = np.concatenate((np.ones(tar_scores.size), np.zeros(non_scores.size), -1*np.ones(spf_scores.size)))
-
-    # Sort labels based on scores
-    indices = np.argsort(all_scores, kind='mergesort')
-    labels = labels[indices]
-
-    # Cumulative sums
-    tar_sums    = np.cumsum(labels==1)
-    non_sums    = np.cumsum(labels==0)
-    spoof_sums  = np.cumsum(labels==-1)
-
-    Pmiss       = np.concatenate((np.atleast_1d(0), tar_sums / tar_scores.size))
-    Pfa_non     = np.concatenate((np.atleast_1d(1), 1 - (non_sums / non_scores.size)))
-    Pfa_spoof   = np.concatenate((np.atleast_1d(1), 1 - (spoof_sums / spf_scores.size)))
-    thresholds  = np.concatenate((np.atleast_1d(all_scores[indices[0]] - 0.001), all_scores[indices]))  # Thresholds are the sorted scores
-
-    return Pmiss, Pfa_non, Pfa_spoof, thresholds
-
 
 def compute_teer(Pmiss_CM, Pfa_CM, tau_CM, Pmiss_ASV, Pfa_non_ASV, Pfa_spf_ASV, tau_ASV):
+    """Compute concurrent t-EER
+    
+    input
+    -----
+      Pmiss_CM: np.array, (N, ), miss rates of CM
+      Pfa_CM: np.array, (N, ), false acceptanace rates of CM
+      tau_cm: np.array, (N, ), thresholds of CM
+
+      Pmiss_ASV: np.array, (M, ), miss rates of ASV
+      Pfa_non_ASV: np.array, (M, ), false acc rates of nontarget data ASV
+      Pfa_spf_ASV: np.array, (M, ), false acc rates of spoofed data of ASV
+      tau_asv: np.array, (M, ), thresholds of ASV
+    
+    output
+    ------
+      con_t-eer: scalar, concurrent EER
+
+    Note that N = len(bonafide_CM_scores) + len(spoofed_CM_scores)
+    M = len(target_ASV_scores) + len(nontarget_ASV_scores) + len(spoofed)
+    """
+
+    
     # Different spoofing prevalence priors (rho) parameters values
-    rho_vals            = [0,0.5,1]
+    # rho_vals            = [0,0.5,1]
+    # for concurrent t-EER, any rho gives the same result, so use one
+    rho_vals = [0.5]
 
     tEER_val    = np.empty([len(rho_vals),len(tau_ASV)], dtype=float)
 

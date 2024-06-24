@@ -1,3 +1,10 @@
+#!/usr/bin/env python3
+"""
+Adopted from https://github.com/shimhz/a_DCF
+
+a-DCF: an architecture agnostic metric with application to spoofing-robust speaker verification, published in Odyssey 2024
+"""
+
 import sys
 import os
 from typing import List
@@ -5,16 +12,18 @@ from dataclasses import dataclass
 
 import numpy as np
 
-@dataclass
-class CostModel:
-    "Class describing SASV-DCF's relevant costs"
-    Pspf: float = 0.05
-    Pnontrg: float = 0.05
-    Ptrg: float = 0.9
-    Cmiss: float = 1
-    Cfa_asv: float = 10
-    Cfa_cm: float = 20
 
+class CostModel:
+    """Class describing SASV-DCF's relevant costs"""
+    def __init__(self, Pspf = 0.05, Pnontrg = 0.05, Ptrg = 0.9,
+                 Cmiss = 1, Cfa_asv = 10, Cfa_cm = 20):
+        self.Pspf = Pspf
+        self.Pnontrg = Pnontrg
+        self.Ptrg = Ptrg
+        self.Cmiss = Cmiss
+        self.Cfa_asv = Cfa_asv
+        self.Cfa_cm = Cfa_cm
+        
 
 def calculate_a_dcf(
     sasv_score_dir: str,
