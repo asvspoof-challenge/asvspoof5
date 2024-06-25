@@ -2,7 +2,8 @@
 """
 Adopted from https://github.com/shimhz/a_DCF
 
-a-DCF: an architecture agnostic metric with application to spoofing-robust speaker verification, published in Odyssey 2024
+a-DCF: an architecture agnostic metric with application to 
+spoofing-robust speaker verification, published in Odyssey 2024.
 """
 
 import sys

@@ -1,14 +1,20 @@
+#!/usr/bin/env python3
+"""
+main function to run evaluation package.
+
+See usage in README.md
+"""
 import argparse
 import sys
 
-from calculate_metrics import calculate_minDCF_EER_CLLR, calculate_aDCF_tdcf_tEER
-import a_dcf
+from calculate_metrics import calculate_minDCF_EER_CLLR
+from calculate_metrics import calculate_aDCF_tdcf_tEER
 import util
 
 def main(args: argparse.Namespace) -> None:
 
     if args.mode == "t1":
-
+        
         # load score and keys
         cm_scores, cm_keys = util.load_cm_scores_keys(args.score_cm, args.key_cm)
         

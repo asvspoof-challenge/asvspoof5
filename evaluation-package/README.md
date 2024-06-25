@@ -10,6 +10,16 @@ Track 2
 * min t-DCF and t-EER (secondary)
 
 
+## Requirements
+
+Scipy, numpy, and pandas. No specific requirement on the version.
+
+If using conda, you can install an environment by
+```bash
+conda create --name <ENV_NAME> python=3.8.0 scipy=1.10.1 pandas=1.2.4
+```
+
+
 ## Usage
 For the Track 1, cm score 
 
