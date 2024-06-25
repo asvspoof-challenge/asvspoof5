@@ -7,7 +7,7 @@ See usage in README.md
 import argparse
 import sys
 
-from calculate_metrics import calculate_minDCF_EER_CLLR
+from calculate_metrics import calculate_minDCF_EER_CLLR_actDCF
 from calculate_metrics import calculate_aDCF_tdcf_tEER
 import util
 
@@ -18,7 +18,7 @@ def main(args: argparse.Namespace) -> None:
         # load score and keys
         cm_scores, cm_keys = util.load_cm_scores_keys(args.score_cm, args.key_cm)
         
-        minDCF, eer, cllr, actDCF = calculate_minDCF_EER_CLLR(
+        minDCF, eer, cllr, actDCF = calculate_minDCF_EER_CLLR_actDCF(
             cm_scores = cm_scores,
             cm_keys = cm_keys,
             output_file="./track1_result.txt")

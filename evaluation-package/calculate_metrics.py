@@ -5,11 +5,11 @@ from calculate_modules import *
 import a_dcf
 
 
-def calculate_minDCF_EER_CLLR(cm_scores, cm_keys, output_file, printout=True):
+def calculate_minDCF_EER_CLLR_actDCF(cm_scores, cm_keys, output_file, printout=True):
     """
     Evaluation metrics for track 1
     Primary metrics: min DCF,
-    Secondary metrics: EER, CLLR
+    Secondary metrics: EER, CLLR, actDCF
     """
     
     Pspoof = 0.05
