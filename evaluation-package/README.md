@@ -3,11 +3,21 @@ We provide this evaluation package to compute the evaluation metrics for both Ph
 
 Track 1
 * min DCF (primary)
-* CLLR, EER (secondary)
+* CLLR, EER, actDCF (secondary)
 
 Track 2
 * a-tdcf (primary)
 * min t-DCF and t-EER (secondary)
+
+
+## Requirements
+
+Scipy, numpy, and pandas. No specific requirement on the version.
+
+If using conda, you can install an environment by
+```bash
+conda create --name <ENV_NAME> python=3.8.0 scipy=1.10.1 pandas=1.2.4
+```
 
 
 ## Usage
@@ -15,46 +25,60 @@ For the Track 1, cm score
 
 1. Track 1
    
-Calculate minDCF, CLLR, and EER by giving one cm score file
+Calculate minDCF, CLLR, and EER by giving one cm score file and key file
 ```
-python evaluation.py --m t1 --cm cm_score_file
+python evaluation.py --m t1 --cm cm_score_file --cm_key cm_key_file
 ```
 
 2. Track 2
 
-Calculate a-DCF, min t-DCF, and t-EER by giving cm score file (and asv score file for min t-DCF and t-EER)
-To compute a-DCF, `pip install a_dcf` will install the package.
-For further details, please check [([Github](https://github.com/shimhz/a_DCF))].
+Calculate a-DCF, min t-DCF, and t-EER by giving an SASV score file and key file
+
 ```
 # To calculate all metrics, 
-python evaluation.py --m t2_tandem --cm cm_score_file --asv asv_score_file
+python evaluation.py --m t2_tandem --sasv sasv_score_file --sasv_key sasv_key_file
 
 # To calculate a-DCF only, 
-python evaluation.py --m t2_single --cm cm_score_file
+python evaluation.py --m t2_single --sasv sasv_score_file --sasv_key sasv_key_file
 ```
 
 ### Score file format
-- The score file format should include four columns:
-  - (i) speaker model, (ii) test utterance, (iii) score, and (iv) trial type
-- Example of score file
+
+cm_score_file must have two columns, separated by \t, with header
+
+```bash
+filename	cm-score
+E_000001	0.01
+E_000002	0.02
 ```
-# CM score file (for minDCF, CLLR, EER, and a-DCF)
-# <speaker_id> <utterance_id> <score> <trial type> 
-LA_0015 LA_E_1103494 6.960134565830231 bonafide
-LA_0007 LA_E_5013670 6.150891035795212 bonafide
-LA_0007 LA_E_7417804 -2.306972861289978 spoof
 
-# ASV score file (for min t-DCF and t-EER)
-# <cm_label> <sasv_label> <score>
-bonafide target 36.78691
-bonafide nontarget -39.15536
-A01 spoof 27.07672
+cm_key_file must have two columns, separated by \t, with header
+```bash
+filename	cm-label
+E_000001	bonafide
+E_000002	spoof
+```
 
-# SASV score file (for a-DCF)
-# <speaker_id> <utterance_id> <score> <trial type> 
-LA_0015 LA_E_1103494 6.960134565830231 target
-LA_0007 LA_E_5013670 6.150891035795212 nontarget
-LA_0007 LA_E_7417804 -2.306972861289978 spoof
+sasv_score_file must have four columns, separated by \t, with header
+```bash
+filename	cm-score	asv-score	sasv-score
+E_000001	0.01		0.01		0.04
+E_000002	0.02		0.02		0.05
+```
+
+if sasv system produces no cm-score and asv-score
+```bash
+filename	cm-score	asv-score	sasv-score
+E_000001	-		-		0.04
+E_000002	-		-		0.05
+```
+
+sasv_key_file must have three columns, separated by \t, with header
+```bash
+filename	cm-label	asv-label
+E_000001	bonafide	target
+E_000002	spoof		spoof
+E_000003	bonafide	nontarget
 ```
 
 

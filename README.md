@@ -24,8 +24,13 @@ Two baselines for SASV are available:
 
 Track 1
 * minDCF (primary)
-* CLLR, EER (secondary)
+* CLLR, EER, actDCF (secondary)
 
 Track 2
 * a-DCF (primary)
 * min t-DCF and t-EER (secondary)
+
+
+## Other tools
+
+Tool-score-fusion: a reference tool to fuse ASV and CM scores for track 2.
