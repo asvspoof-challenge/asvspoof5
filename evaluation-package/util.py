@@ -56,7 +56,7 @@ def load_cm_scores_keys(cm_scores_file, cm_keys_file, default_index='filename'):
     return cm_pd['cm-score'].to_numpy(), cm_pd['cm-label'].to_numpy()
 
 
-def load_sasv_scores_keys(sasv_scores_file, sasv_keys_file, default_index='filename'):
+def load_sasv_scores_keys(sasv_scores_file, sasv_keys_file, default_index=['spk', 'filename']):
     """
     input
     -----
@@ -91,6 +91,8 @@ def load_sasv_scores_keys(sasv_scores_file, sasv_keys_file, default_index='filen
     
     # merge scores and keys
     sasv_pd = sasv_scores_pd.join(sasv_keys_pd)
+    assert sasv_pd.shape[0] == sasv_scores_pd.shape[0], 'Error: SASV score and key incompatible'
+    assert sasv_pd.shape[0] == sasv_keys_pd.shape[0], 'Error: SASV score and key incompatible'
     
     return sasv_pd['cm-score'].to_numpy(), sasv_pd['asv-score'].to_numpy(), \
         sasv_pd['sasv-score'].to_numpy(), \
