@@ -61,13 +61,13 @@ def load_sasv_scores_keys(sasv_scores_file, sasv_keys_file, default_index=['spk'
     input
     -----
       sasv_scores_file: str, path to the SASV score file
-         four columns
-         filename        cm-score        asv-score       sasv-score
-         E_0000103882    4.76273775100708        -1.0224495      1.87014412550354
+         five columns
+         spk        filename        cm-score          asv-score       sasv-score
+         E_0101     E_0000000001    4.76273775100708  -1.0224495      1.87014412550354
 
       sasv_keys_file: str, path to the SASV key file
-         filename        cm-label        asv-label
-         E_0007976787    spoof   spoof
+         spk        filename        cm-label          asv-label
+         E_0101     E_0000000001    spoof             spoof
 
     output
     ------
