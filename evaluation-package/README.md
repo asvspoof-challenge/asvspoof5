@@ -59,26 +59,26 @@ E_000001	bonafide
 E_000002	spoof
 ```
 
-sasv_score_file must have four columns, separated by \t, with header
+sasv_score_file must have five columns, separated by \t, with header
 ```bash
-filename	cm-score	asv-score	sasv-score
-E_000001	0.01		0.01		0.04
-E_000002	0.02		0.02		0.05
+spk	filename	cm-score	asv-score	sasv-score
+E_0101	E_000001	0.01		0.01		0.04
+E_0203	E_000002	0.02		0.02		0.05
 ```
 
 if sasv system produces no cm-score and asv-score
 ```bash
-filename	cm-score	asv-score	sasv-score
-E_000001	-		-		0.04
-E_000002	-		-		0.05
+spk	filename	cm-score	asv-score	sasv-score
+E_0101	E_000001	-		-		0.04
+E_0203	E_000002	-		-		0.05
 ```
 
-sasv_key_file must have three columns, separated by \t, with header
+sasv_key_file must have four columns, separated by \t, with header
 ```bash
-filename	cm-label	asv-label
-E_000001	bonafide	target
-E_000002	spoof		spoof
-E_000003	bonafide	nontarget
+spk	filename	cm-label	asv-label
+E_0101	E_000001	bonafide	target
+E_0202	E_000002	spoof		spoof
+E_2918	E_000003	bonafide	nontarget
 ```
 
 
