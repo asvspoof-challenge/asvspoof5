@@ -4,7 +4,7 @@ By [ASVspoof5 challenge organizers](https://www.asvspoof.org/)
 
 ## Baseline CMs (track 1)
 
-Three baselines for CMs are available: 
+These baselines for CMs are available: 
 
 * Baseline-RawNet2 (PyTorch) <br/> End-to-End DNN classifier
 * Baseline-AASIST (PyTorch) <br/> End-to-End graph attention-based classifier
