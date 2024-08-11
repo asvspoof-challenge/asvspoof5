@@ -3,7 +3,7 @@ import numpy as np
 
 from calculate_modules import *
 import a_dcf
-
+import util
 
 def calculate_minDCF_EER_CLLR_actDCF(cm_scores, cm_keys, output_file, printout=True):
     """
@@ -23,8 +23,8 @@ def calculate_minDCF_EER_CLLR_actDCF(cm_scores, cm_keys, output_file, printout=T
     assert cm_keys.size == cm_scores.size, "Error, unequal length of cm label and score files"
     
     # Extract bona fide (real human) and spoof scores from the CM scores
-    bona_cm = cm_scores[cm_keys == 'bonafide']
-    spoof_cm = cm_scores[cm_keys == 'spoof']
+    bona_cm = cm_scores[cm_keys == util.g_cm_bon]
+    spoof_cm = cm_scores[cm_keys == util.g_cm_spf]
 
     # EERs of the standalone systems
     eer_cm, frr, far, thresholds, eer_threshold = compute_eer(bona_cm, spoof_cm)#[0]
@@ -56,7 +56,8 @@ def calculate_minDCF_EER_CLLR_actDCF(cm_scores, cm_keys, output_file, printout=T
 
 
 def calculate_aDCF_tdcf_tEER(cm_scores, asv_scores, sasv_scores, cm_keys,
-                             asv_keys, output_file, printout=True):
+                             asv_keys, output_file, printout=True,
+                             asv_scores_org = None, asv_keys_org = None):
     """
     Evaluation metrics for Phase 2
     Primary metrics: a_DCF
@@ -94,10 +95,29 @@ def calculate_aDCF_tdcf_tEER(cm_scores, asv_scores, sasv_scores, cm_keys,
         'Cfa_cm': 10,  
     }
 
-    # from default ASV of organizers
-    Pfa_non_ASV_org =  0.01881016557566423
-    Pmiss_ASV_org = 0.01880141010575793
-    Pfa_spf_ASV_org = 0.4607082907604729
+    # ASV error rates from default ASV of the organizers
+    if asv_scores_org is None or asv_keys_org is None:
+        # use pre-computed ASV error rates pooled over all conditions
+        Pfa_non_ASV_org =  0.01881016557566423
+        Pmiss_ASV_org = 0.01880141010575793
+        Pfa_spf_ASV_org = 0.4607082907604729
+        
+    else:
+        # compute ASV error rates using proved ASV scores
+        tar_asv_org = asv_scores_org[asv_keys_org == util.g_asv_tar]
+        non_asv_org = asv_scores_org[asv_keys_org == util.g_asv_non]
+        spf_asv_org = asv_scores_org[asv_keys_org == util.g_asv_spf]
+        
+        # compute ASV threshold
+        _, _, _, _, asv_org_threshold = compute_eer(tar_asv_org, non_asv_org)
+
+        # get the error rates
+        tmp = obtain_asv_error_rates(
+            tar_asv_org, non_asv_org, spf_asv_org, asv_org_threshold)
+        Pfa_non_ASV_org = tmp[0]
+        Pmiss_ASV_org = tmp[1]
+        Pfa_spf_ASV_org = tmp[2]
+
 
     # for a-DCF
     cost_adcf = a_dcf.CostModel(
@@ -113,9 +133,9 @@ def calculate_aDCF_tdcf_tEER(cm_scores, asv_scores, sasv_scores, cm_keys,
     ###
     
     # Extract SASV scores
-    tar_sasv = sasv_scores[asv_keys == 'target']
-    nontar_sasv = sasv_scores[asv_keys == 'nontarget']
-    spoof_sasv = sasv_scores[asv_keys == 'spoof']
+    tar_sasv = sasv_scores[asv_keys == util.g_asv_tar]
+    nontar_sasv = sasv_scores[asv_keys == util.g_asv_non]
+    spoof_sasv = sasv_scores[asv_keys == util.g_asv_spf]
     
     ###
     # Calculate a-DCF
@@ -140,23 +160,23 @@ def calculate_aDCF_tdcf_tEER(cm_scores, asv_scores, sasv_scores, cm_keys,
     ###
     
     # Extract target, nontarget, and spoof scores from the ASV scores
-    tar_asv = asv_scores[asv_keys == 'target']
-    non_asv = asv_scores[asv_keys == 'nontarget']
-    spoof_asv = asv_scores[asv_keys == 'spoof']
+    tar_asv = asv_scores[asv_keys == util.g_asv_tar]
+    non_asv = asv_scores[asv_keys == util.g_asv_non]
+    spoof_asv = asv_scores[asv_keys == util.g_asv_spf]
 
     # Extract bona fide (real human) and spoof scores from the CM scores
-    bona_cm = cm_scores[cm_keys == 'bonafide']
-    spoof_cm = cm_scores[cm_keys == 'spoof']
+    bona_cm = cm_scores[cm_keys == util.g_cm_bon]
+    spoof_cm = cm_scores[cm_keys == util.g_cm_spf]
     
     # need to check here that the utt_ids are the same in cm and asv files
     # --> this is checked in util
     # asv-cm score pairs
-    X_tar = np.array([asv_scores[asv_keys == 'target'],
-                      cm_scores[asv_keys == 'target']], dtype=object)
-    X_non = np.array([asv_scores[asv_keys == 'nontarget'],
-                      cm_scores[asv_keys == 'nontarget']], dtype=object)
-    X_spf = np.array([asv_scores[asv_keys == 'spoof'],
-                      cm_scores[asv_keys == 'spoof']], dtype=object)
+    X_tar = np.array([asv_scores[asv_keys == util.g_asv_tar],
+                      cm_scores[asv_keys == util.g_asv_tar]], dtype=object)
+    X_non = np.array([asv_scores[asv_keys == util.g_asv_non],
+                      cm_scores[asv_keys == util.g_asv_non]], dtype=object)
+    X_spf = np.array([asv_scores[asv_keys == util.g_asv_spf],
+                      cm_scores[asv_keys == util.g_asv_spf]], dtype=object)
     ###
     # Fix tandem detection cost function (t-DCF) parameters
     ###
@@ -180,8 +200,8 @@ def calculate_aDCF_tdcf_tEER(cm_scores, asv_scores, sasv_scores, cm_keys,
     # Obtain CM error curves and CM thresholds.
     Pmiss_CM, Pfa_CM, tau_CM = compute_det_curve(np.concatenate([X_tar[1], X_non[1]]), X_spf[1])
 
-    teer = compute_teer(Pmiss_CM, Pfa_CM, tau_CM, Pmiss_ASV, Pfa_non_ASV, Pfa_spf_ASV, tau_ASV)
     
+    teer = compute_teer_accelerated(Pmiss_CM, Pfa_CM, tau_CM, Pmiss_ASV, Pfa_non_ASV, Pfa_spf_ASV, tau_ASV)
 
     if printout:
         with open(output_file, "w") as f_res:

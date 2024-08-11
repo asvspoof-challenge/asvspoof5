@@ -1,7 +1,6 @@
 import sys
 import numpy as np
 
-
 def obtain_asv_error_rates(tar_asv, non_asv, spoof_asv, asv_threshold):
     """
     compute ASV error rates
@@ -444,7 +443,9 @@ def calculate_CLLR(target_llrs, nontarget_llrs):
 
 
 
-def compute_teer(Pmiss_CM, Pfa_CM, tau_CM, Pmiss_ASV, Pfa_non_ASV, Pfa_spf_ASV, tau_ASV):
+def compute_teer(Pmiss_CM, Pfa_CM, tau_CM,
+                 Pmiss_ASV, Pfa_non_ASV, Pfa_spf_ASV, tau_ASV,
+                 flag_return_index=False):
     """Compute concurrent t-EER
     
     input
@@ -458,6 +459,9 @@ def compute_teer(Pmiss_CM, Pfa_CM, tau_CM, Pmiss_ASV, Pfa_non_ASV, Pfa_spf_ASV, 
       Pfa_spf_ASV: np.array, (M, ), false acc rates of spoofed data of ASV
       tau_asv: np.array, (M, ), thresholds of ASV
     
+      flag_return_index: bool, whether return the index of the CM and ASV
+        scores for concurrent tEER, default False
+
     output
     ------
       con_t-eer: scalar, concurrent EER
@@ -490,7 +494,8 @@ def compute_teer(Pmiss_CM, Pfa_CM, tau_CM, Pmiss_ASV, Pfa_non_ASV, Pfa_spf_ASV, 
         # best intersection point
         xpoint_crit_best = np.inf
         xpoint = np.empty(2)
-
+        xpoint_index = []
+        
         # Loop over all possible ASV thresholds
         for tau_ASV_idx, tau_ASV_val in enumerate(tau_ASV):
 
@@ -527,6 +532,7 @@ def compute_teer(Pmiss_CM, Pfa_CM, tau_CM, Pmiss_ASV, Pfa_non_ASV, Pfa_spf_ASV, 
                     xpoint[0] = tau_ASV_val
                     xpoint[1] = tau_CM[tmp]
                     xpoint_tEER = Pfa_spf_ASV[tau_ASV_idx]*Pfa_CM[tmp]
+                    xpoint_index = [tau_ASV_idx, tmp]
             else:
                 # Not in allowed region
                 tEER_path[rho_idx,tau_ASV_idx, 0] = np.nan
@@ -535,4 +541,66 @@ def compute_teer(Pmiss_CM, Pfa_CM, tau_CM, Pmiss_ASV, Pfa_non_ASV, Pfa_spf_ASV, 
                 Pfa_total[tau_ASV_idx] = np.nan
                 tEER_val[rho_idx,tau_ASV_idx] = np.nan
 
-        return xpoint_tEER*100
+        if not flag_return_index:
+            return xpoint_tEER*100
+        else:
+            return xpoint_tEER*100, xpoint_index
+
+
+def compute_teer_accelerated(Pmiss_CM, Pfa_CM, tau_CM, Pmiss_ASV, Pfa_non_ASV, Pfa_spf_ASV, tau_ASV, size_decimated = 3000, bin_width = 1600):
+    """Similar to compute_teer but accelerate
+    but doing coarse search and fine search
+
+    """
+
+    # index for downsampling
+    ds_asv_ratio = tau_ASV.shape[0] // size_decimated
+    ds_cm_ratio = tau_CM.shape[0] // size_decimated
+    
+    if ds_asv_ratio > 0 and ds_cm_ratio > 0:
+        # down-sampling the original scores
+        # do a coarse search
+        tmp_asv_idx = np.arange(tau_ASV.shape[0])[::ds_asv_ratio]
+        tmp_cm_idx = np.arange(tau_CM.shape[0])[::ds_cm_ratio]
+        
+        _, approx_teer_index = compute_teer(
+            Pmiss_CM[tmp_cm_idx], Pfa_CM[tmp_cm_idx], tau_CM[tmp_cm_idx],
+            Pmiss_ASV[tmp_asv_idx], Pfa_non_ASV[tmp_asv_idx],
+            Pfa_spf_ASV[tmp_asv_idx], tau_ASV[tmp_asv_idx],
+            flag_return_index=True)
+    else:
+        approx_teer_index = []
+
+    if len(approx_teer_index):
+        # fine-grid search
+        
+        # approximate index in the original data arrary
+        cen_asv_idx = approx_teer_index[0] * ds_asv_ratio
+        cen_cm_idx = approx_teer_index[1] * ds_cm_ratio
+    
+        # now focus on a region surrounding the returned index,
+        #  then obtain tEER
+        asv_bin_1 = np.max([cen_asv_idx - bin_width, 0])
+        asv_bin_2 = np.min([cen_asv_idx + bin_width, len(tau_ASV)])
+        
+        cm_bin_1 = np.max([cen_cm_idx - bin_width, 0])
+        cm_bin_2 = np.min([cen_cm_idx + bin_width, len(tau_CM)])
+        
+        teer = compute_teer(
+            Pmiss_CM[cm_bin_1:cm_bin_2],
+            Pfa_CM[cm_bin_1:cm_bin_2],
+            tau_CM[cm_bin_1:cm_bin_2],
+            Pmiss_ASV[asv_bin_1:asv_bin_2],
+            Pfa_non_ASV[asv_bin_1:asv_bin_2],
+            Pfa_spf_ASV[asv_bin_1:asv_bin_2],
+            tau_ASV[asv_bin_1:asv_bin_2])
+        
+    else:
+        # use original implementation
+        teer = compute_teer(
+            Pmiss_CM, Pfa_CM, tau_CM,
+            Pmiss_ASV, Pfa_non_ASV, Pfa_spf_ASV, tau_ASV)
+        
+    return teer
+
+
