@@ -6,7 +6,7 @@ Track 1
 * CLLR, EER, actDCF (secondary)
 
 Track 2
-* a-tdcf (primary)
+* a-DCF (primary)
 * min t-DCF and t-EER (secondary)
 
 
